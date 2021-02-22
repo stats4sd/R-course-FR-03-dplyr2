@@ -1,0 +1,553 @@
+---
+title: "Manipulating Data using dplyr: part 2"
+output: 
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+    df_print: paged
+runtime: shiny_prerendered
+description: >
+  Learn to manipulate data with the package dplyr.
+---
+
+
+```{r setup, include=FALSE}
+library(learnr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+tutorial_options(exercise.timelimit = 10)
+options(max.print=50)
+BeanSurvey<-readRDS("bean_survey.RDS")
+```
+
+
+## Combining manipulations
+
+We've now learnt to use most of the core functions of dplyr. But their use is greatly limited by the fact that we still don't know how to combine them together. 
+
+![](https://youtu.be/skdI9iIysm0)
+
+As explained in the video, if we don't store the results of our commands, there is no way to re-use them. This is actually true for the great majority of R commands, not just those involving the core functions of dplyr. So to perform a sequence of manipulations, we need to either:
+
+- store the result of each manipulation as a data frame, to then make it the first argument of the next function.
+- combine all the manipulations we want to perform into one single command using the **pipe operator**.
+
+You already know everything there is to know to perform a sequence of manipulations via the first option.
+For example, if we wanted to calculate a couple of summary statistics on the household living in the Lwala village, we could do the following:
+
+```{r sequence_1, exercise = TRUE}
+BeanSurvey_Lwala <- filter(BeanSurvey, VILLAGE=="Lwala")
+summarise(BeanSurvey_Lwala, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
+```
+First we use `filter()` to keep only the households of "Lwala". We store the result as a new object, called "BeanSurvey_Lwala". Nothing gets printed at this stage. Then we use the `summarise()` command, but with the newly created object as the first argument instead of the full BeanSurvey dataset.
+
+
+
+**Question: change the command to get summaries for the households in Kimbugu rather than Lwala. Give a sensible name to the intermediate data frame**
+
+```{r sequence_2, exercise = TRUE}
+BeanSurvey_Lwala <- filter(BeanSurvey, VILLAGE=="Lwala")
+summarise(BeanSurvey_Lwala, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
+```
+
+```{r sequence_2-solution}
+BeanSurvey_Kimbugu <- filter(BeanSurvey, VILLAGE=="Kimbugu")
+summarise(BeanSurvey_Kimbugu, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
+```
+
+But what if there were say, 20 villages? Doing this for each village would be very time consuming. Don't worry, there is a much better approach, using `group_by()`, the last core function of the package dplyr.
+
+
+## group_by()
+
+`group_by()` tells R to separate a dataset into groups, based on the values of a column. All the subsequent operations performed on the resulting "grouped" dataset are applied to each group rather than to the whole dataset. For the syntax, we indicate the dataset first, as usual, and then we indicate the column whose values will define our groups. Let's group our dataset by village
+
+```{r group_1, exercise = TRUE}
+group_by(BeanSurvey, VILLAGE)
+
+```
+Let's see... 50 rows, 23 columns, original order of these rows and columns... Well it looks like nothing happened to our dataset. But it's just because the grouping is invisible. We need to apply another function to see the effect of `group_by()`. Let's store our grouped data frame in an object called say, "BeanSurvey_ByVillage", and let's use this object as the first argument of the function `summarise()`
+
+```{r group_2, exercise = TRUE}
+BeanSurvey_ByVillage <- group_by(BeanSurvey, VILLAGE)
+summarise(BeanSurvey_ByVillage, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
+```
+
+Yes, now our `summarise()` command returns two rows instead of one: one row of summaries per village!
+
+The effect of `group_by()` on the result of `summarise()` is very intuitive. We obtain the calculated summaries for each of the groups defined by the function `group_by()`. At first, it might be slightly less obvious that `group_by()` is also very useful in combination with `filter()` or `mutate()`. But consider the case where we would like to retrieve for each village the information of the household that has harvested the highest quantity of beans in long rain season. With filter, we can easily get the household that has harvested the highest quantity of beans during the long rain season in the full dataset:
+```{r group_4, exercise = TRUE}
+filter(BeanSurvey, BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE))
+
+```
+Note that there is one value that is missing in the column `BEANSHARVESTED_LR`, so we need to use `na.rm=TRUE` like for the function `mean()` earlier.
+
+But the highest production of beans during long rain season comes from a household in *Kimbugu*. In Lwala, the highest production is smaller than that and so it is not captured by our filter function.
+
+Using `group_by()` first, and *then* `filter()` would restrict the scope of `BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE)` to each village, and so if a household has the highest production in this village, filter will retrieve it.
+
+```{r group_4a, exercise = TRUE}
+BeanSurvey_ByVillage <- group_by(BeanSurvey, VILLAGE)
+filter(BeanSurvey_ByVillage, BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE))
+
+```
+
+
+**Question: Calculate the number of household and average land area for each type of household composition (column HHTYPE). What do we seem to see?**
+```{r group_4b, exercise = TRUE}
+
+
+```
+
+```{r group_4b-solution}
+BeanSurvey_ByHHType<-group_by(BeanSurvey, HHTYPE)
+summarise(BeanSurvey_ByHHType, households=n(), averageArea=mean(LANDAREA))
+# There are two main household composition in the dataset: Female headed, no husband (13 households), and Male headed one wife (27 households)
+# The households of the second type seem to have the largest lands in average
+
+```
+
+We have learnt about the very useful `group_by()` function and we have a descent way to combine two manipulations together. So far, so good. But what if we wanted to perform more than two manipulations? What if, for example, we wanted to keep in our dataset only those household who grow beans and then, to calculate for each village the average yield per acre in long rain season? It doesn't sound too complicated, but we need to use four functions:
+
+- `filter()` to get rid of the households that don't grow beans
+- `mutate()` to calculate the yield per acre of each household
+- `group_by()` to group our data by village
+- `summarise()` to calculate the average yield per acre by village.
+
+And after each manipulation, we need to save the result as a new data frame that will be used as the input for the next function.
+
+This would do the job:
+
+```{r group_5, exercise = TRUE}
+BeanSurvey_filtered <- filter(BeanSurvey, BEANS=="Yes")
+BeanSurvey_mutated <- mutate(BeanSurvey_filtered, yield_per_acre = BEANSHARVESTED_LR/LANDAREA)
+BeanSurvey_grouped_by<- group_by(BeanSurvey_mutated, VILLAGE)
+summarise(BeanSurvey_grouped_by, households=n(), avg_yield_per_acre=mean(yield_per_acre, na.rm=TRUE))
+
+```
+The code above starts to be quite messy, with lots of intermediate data frames that we are not really interested in. One thing you may suggest to simplify our set of commands is to have only one intermediate data frame, that we overwrite. Something like that:
+```{r group_7, exercise = TRUE}
+temp_data <- filter(BeanSurvey, BEANS=="Yes")
+temp_data <- mutate(temp_data, yield_per_acre = BEANSHARVESTED_LR/LANDAREA)
+temp_data <- group_by(temp_data, VILLAGE)
+summarise(temp_data, households=n(), avg_yield_per_acre=mean(yield_per_acre, na.rm=TRUE))
+
+```
+
+It looks slightly simpler maybe, and show you that when creating objects with `<-`, it makes no difference whether the name of the object is new or not. If it is not new, R will just overwrite the old object.
+
+But this way of overwriting objects over and over is definitely not good practice, as in some situations you may end up loosing valuable data. We don't need to use such approach though. We can make our command much more clean and readable if we use the pipe operator!
+
+
+## pipe %>%
+
+The symbol used for the pipe operator in R is `%>%`, that is a symbol greater than `>` surrounded by two percentages `%`. This operator is extremely useful because it makes it possible to perform a sequence of data manipulations using dplyr functions, without having to create any intermediate data frame. This is due to the consistent syntax of these dplyr functions, and in particular, the fact that their first argument is always the data fame that we want to manipulate.
+
+Because what the pipe operator does is to tell R
+
+> take what's on my left, and make it the first argument of the next function on my right (or below me)
+
+So if in the command `thing1 %>% thing2`, `thing1` is a data frame and `thing2` is a dplyr function, the pipe operator will ask R to make the data frame the first argument of the dplyr function. And R will happily perform the corresponding manipulation on the data frame since it results in a valid command.
+
+```{r pipe_1, exercise = TRUE}
+BeanSurvey %>% filter(BEANS=="Yes")
+
+```
+
+In the above commands, the pipe operator asks R to take what's on its left - the data frame `BeanSurvey` - and to make it the first argument of what's on its right - the function `filter()`.
+The command is therefore equivalent to
+
+```{r pipe_1b, exercise = TRUE}
+filter(BeanSurvey, BEANS=="Yes")
+
+```
+
+Instead of placing the function filter to the right of the pipe, we can, and usually should place it below the pipe, with a little indentation, similar to what you do with the `+` in ggplot2. It's good practice for readability, and it doesn't change anything. R will see the pipe and look for the next command. This command happens to be below the pipe rather than on its right.
+
+```{r pipe_2, exercise = TRUE}
+BeanSurvey %>% 
+  filter(BEANS=="Yes")
+
+```
+ 
+
+What is great with pipes is that the *what's on my left* can well be a command itself, if the result of the command is a data frame. So we can redo the last commands of the previous section, using pipes.
+
+
+Our commands were
+```{r pipe_2b, exercise = TRUE}
+BeanSurvey_filtered <- filter(BeanSurvey, BEANS=="Yes")
+BeanSurvey_mutated <- mutate(BeanSurvey_filtered, yield_per_acre = BEANSHARVESTED_LR/LANDAREA)
+BeanSurvey_grouped_by<- group_by(BeanSurvey_mutated, VILLAGE)
+summarise(BeanSurvey_grouped_by, households=n(), avg_yield_per_acre=mean(yield_per_acre, na.rm=TRUE))
+
+```
+
+
+Using pipes it becomes:
+
+```{r pipe_3, exercise = TRUE}
+BeanSurvey %>% 
+  filter(BEANS=="Yes") %>%
+    mutate(yield_per_acre = BEANSHARVESTED_LR/LANDAREA) %>%
+      group_by(VILLAGE) %>%
+        summarise(households=n(), avg_yield_per_acre=mean(yield_per_acre, na.rm=TRUE))
+
+```
+
+We start with the dataset `BeanSurvey`. The pipe next to it will make it the first argument of the function `filter()` that follows. The next pipe makes the resulting command the first argument of the function `mutate()`. The next pipe takes the result of all of this and make it the first argument of the next function, which is `group_by()`. And the last pipe makes the resulting data frame, the first argument of the function `summarise()`. Here we go. We have a neat command that doesn't require the creation of intermediate data frames! Note that when using pipes, the output from the previous line always takes the place of the ‘data’ argument. So when using the commands with the pipes, we skip straight to the second argument.
+
+
+And that's where things start to be very interesting. Because with pipes, it is not a pain anymore to perform a long sequence of manipulations. So we can really start to have fun!
+
+**Question: Find the pipe equivalent of the command below**
+
+```{r pipe_4, exercise = TRUE}
+filter(BeanSurvey, OCCUHH!="Farmer")
+
+```
+
+```{r pipe_4-solution}
+BeanSurvey %>%
+  filter(OCCUHH!="Farmer")
+
+```
+
+
+## More pipes!
+
+
+Pipes are great, but they require some time to get used to it. So let's practice and learn a few more things along the way.
+
+Something I'm wondering is whether the household composition vary by village and gender of household head. I didn't mention it earlier, but we can group by more than one column. We just need to list the corresponding columns within the `group_by()` function, separated with commas:
+```{r pipe_5, exercise = TRUE}
+BeanSurvey %>%
+  group_by(VILLAGE, GENDERHH) %>%
+    summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
+```
+In the command above, I placed a pipe right after the data frame BeanSurvey to tell R that this data frame should be the first argument of the group_by function below. And so the two first lines are grouping the BeanSurvey dataset by village and gender of the head of household. Then I placed a second pipe right after the `group_by()` functon so that the resulting grouped data frame becomes the first argument of the summarise function, where we calculate the number of households and average number of adults and children.
+
+You probably noticed that we have one weird row with an NA value in the column GENDERHH. This row corresponds to the household whose value for GENDERHH is missing. When grouping the data by gender of head of household, R has created an extra group because it doesn't know in which group this household with missing GENDERHH should be placed. I suggest we just remove this household from this analysis by using `filter()` at the beginning of our command. let's see...
+
+This was the command we used earlier to keep only the household for which the head of household's gender was missing:
+```{r pipe_5c, exercise = TRUE}
+filter(BeanSurvey, is.na(GENDERHH)==TRUE)
+```
+
+So conversely, to keep the rows that are **not** missing, we can simply change the TRUE into FALSE:
+```{r pipe_5d, exercise = TRUE}
+filter(BeanSurvey, is.na(GENDERHH)==FALSE)
+```
+Let's now use a pipe to group the resulting data frame by VILLAGE and GENDERHH:
+```{r pipe_5e, exercise = TRUE}
+filter(BeanSurvey, is.na(GENDERHH)==FALSE) %>%
+  group_by(VILLAGE, GENDERHH)
+```
+No change to the output, but we knew that since the effect of `group_by()` is invisible unless we add some other function. In our case, we want to add a `summarise()` function:
+```{r pipe_5f, exercise = TRUE}
+filter(BeanSurvey, is.na(GENDERHH)==FALSE) %>%
+  group_by(VILLAGE, GENDERHH) %>%
+    summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
+```
+Yes! We got it!
+
+To make our command even neater let's use a pipe between our data frame and the `filter()` function:
+```{r pipe_5g, exercise = TRUE}
+BeanSurvey %>%
+  filter(is.na(GENDERHH)==FALSE) %>%
+    group_by(VILLAGE, GENDERHH) %>%
+      summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
+```
+
+Of course, if we want to store the result of our full command into a data frame object for later use, we can do so in the usual way:
+```{r pipe_6, exercise = TRUE}
+summary_data <- BeanSurvey %>%
+  filter(is.na(GENDERHH)==FALSE) %>%
+    group_by(VILLAGE, GENDERHH) %>%
+      summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
+```
+Nothing gets printed, but `summary_data` is saved as a data frame object, so after such command, we could look at it by calling it by name.
+
+
+But we don't necessarily need to store our result to combine it with other functions. We can often directly *pipe* it into these other functions, even if these functions are not part of `dplyr`. That's because pipe is so popular that lots of the most recent packages provide functions that are compatible with pipes. For example, as said in the video, the first argument of the `ggplot()` function is a data frame, so `ggplot()` is compatible with pipes! 
+
+Let's make a scatter plot from the result of our last command: 
+
+```{r pipe_7, exercise = TRUE}
+BeanSurvey %>%
+  filter(is.na(GENDERHH)==FALSE) %>%
+    group_by(VILLAGE, GENDERHH) %>%
+      summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN)) %>%
+        ggplot(aes(x=VILLAGE, y=avg_adults, fill=GENDERHH))+
+          geom_col(position = "dodge")
+```
+`geom_col` is similar to `geom_bar`, except that instead of the height of the bars being calculated from the frequencies of the categories in the data, in `geom_col` this height is directly defined by a y aesthetics. W added the argument `position = "dodge"` to place the bars side by side rather than stacked, as the latter would not make much sense in this case.
+
+It's not the best graph ever, but it is still pretty neat, no? And did you notice how we didn't indicate our usual first argument in the `ggplot()` function? That's because the pipe operator told R to use the result of the `summarise()` function as the data frame for the graph!
+
+
+Also note that we are always writing commands like the one above sequentially, one step at a time. Each individual step was easy and we can feel satisfied with the end product but trying to get there in one move would have been very difficult!
+
+**Question: Produce a boxplot of the household sizes for each village using pipes**
+
+```{r pipe_8, exercise = TRUE}
+
+
+```
+
+```{r pipe_8-solution}
+BeanSurvey %>%
+  mutate(household_size=ADULTS + CHILDREN) %>%
+    filter(household_size<16) %>%
+      ggplot(aes(x=VILLAGE, y=household_size)) +
+        geom_boxplot()
+# the filter() line was not needed, but I decided to remove the extreme household
+# to show you how easy and intuitive it is to add bits of line to a command using pipes
+```
+
+
+
+
+## Quiz
+
+*Question 1*
+
+```{r Q1, echo=FALSE}
+question("What dplyr function is used to create or modify columns of a dataset?",
+  answer("select()", message="select is used to retrieve columns"),
+  answer("filter()", message="filter is used to retrieve rows"),
+  answer("arrange()", message="arrange is used to order rows"),
+  answer("summarise()", message="summarise is used to create summaries"),
+  answer("mutate()",correct=TRUE),
+  answer("group_by()", message="group_by is used to group rows based on some columns"), allow_retry = TRUE,random_answer_order = TRUE
+)
+```
+
+*Question 2*
+
+```{r Q2, echo=FALSE}
+question("Which dplyr functions could be responsible for having an output with fewer columns than the original dataset? (select ALL that apply)",
+  answer("select()", correct = TRUE),
+  answer("filter()", message="with filter it's the number of rows that gets reduced."),
+  answer("arrange()", message="arrange does not affect the number of rows or columns."),
+  answer("summarise()", correct = TRUE),
+  answer("mutate()", message="mutate can only increase the number of columns - actually there's one way to delete columns using mutate, but for this quiz, we'll assume we can't."),
+  answer("group_by()", message="group_by does not affect the number of rows or columns"), allow_retry = TRUE,random_answer_order = TRUE
+)
+```
+
+
+
+*Question 3*
+
+```{r Q3, echo=FALSE}
+question("Which of these commands is correct, if I want to retrieve the households from Lwala",
+  answer("filter(BeanSurvey, Village=='Lwala')", message="there is no column 'Village' in the dataset"),
+  answer("filter(BeanSurvey, VILLAGE=='Lwala')", correct = TRUE),
+  answer("filter(BeanSurvey, Village='Lwala')", message="there is no column 'Village' in the dataset and the single equals sign '=' is used to assign values or objects to names"),
+  answer("filter(BeanSurvey, VILLAGE='Lwala')", message="the single equals sign '=' is used to assign values or objects to names"), allow_retry = TRUE,random_answer_order = TRUE
+)
+```
+
+
+*Question 4*
+
+```
+group_by(BeanSurvey, AGEHH)
+summarise(BeanSurvey_grouped, avg_landArea = mean(LANDAREA))
+
+
+```
+
+```{r Q4, echo=FALSE}
+question("What should I add to the above command to obtain the average land area for each age class of the head of household",
+  answer("`arrange(LANDAREA)` in between the two functions", message="look at the second line - we use the data BeanSurvey_grouped, but it is not defined yet"),
+  answer("`BeanSurvey_grouped <-` in front of the function group_by()", correct=TRUE),
+  answer("`%>%` after the function group_by()", message="it could work, but we'd also need to remove the data from the function summarise()"), allow_retry = TRUE,random_answer_order = TRUE
+)
+```
+
+
+*Question 5*
+
+```
+BeanSurvey %>%
+  mutate(household_size=ADULTS+CHILDREN) %>%
+    filter(OCCUHH=="Farmer" & is.na(household_size)==FALSE) %>%
+      group_by(household_size) %>%
+        summarise(n=n())
+
+```
+```{r Q5, echo=FALSE}
+question("What is the output of the above command (try to find the answer without running the command)",
+  answer("it shows for each size of household in the dataset, the number of household whose head is a farmer", correct=TRUE),
+  answer("It shows the size of household of each head of household whose occupation is non-missing", message="the function is.na() is applied to the household size, not the occupation"),
+  answer("It shows the number of non-missing values for each type of occupation of the head of household", message="look at the function filter. It is keep only the households whose head of household is a farmer"),
+  answer("An error, as n is not part of the dataset", message="There is no error in the output. n is created by the function n(), which counts the number of rows."), allow_retry = TRUE,random_answer_order = TRUE
+)
+```
+
+
+
+
+
+## Exercises
+
+**Exercise 1. retrieve the households that grow banana**
+
+```{r ex1,exercise=TRUE,error=TRUE}
+
+```
+
+<!--
+```{r ex1-solution}
+filter(BeanSurvey, BANANA=="Yes")
+```
+-->
+
+**Exercise 2. Identify and correct the four mistakes that I made in the command below, to obtain the median land area of farm of all the households in the BeanSurvey dataset**
+
+```{r ex2,exercise=TRUE,error=TRUE}
+BeanSurvey %>%
+  filter(BeanSurvey, OCCUHH="Farmer") %>%
+   sumarise(median_landArea = median(LANDAREA)
+```
+
+<!--
+```{r ex2-solution}
+BeanSurvey %>%
+  filter(OCCUHH=="Farmer") %>%
+   summarize(median_landArea = median(LANDAREA))
+
+# 1- either BeanSurvey should be removed from filter, or the first line should be deleted
+# 2- the condition of the filter function needs a double equals
+# 3- the function summarise was misspelled
+# 4- the parenthesis of the function summarise was not closed
+```
+-->
+
+**Exercise 3. which are the 4 households who planted the largest quantity of beans during short rain season?**
+
+```{r ex3, exercise=TRUE}
+
+```
+
+<!--
+```{r ex3-solution}
+BeanSurvey %>% 
+  arrange(desc(BEANSPLANTED_SR)) %>%
+    slice(1:4)
+```
+-->
+
+
+
+**Exercise 4. What is the mean, median and standard deviation of the yield of bean per acre that households harvested during the long rain season in each village**
+
+```{r ex4, exercise=TRUE}
+
+```
+
+<!--
+```{r ex4-solution}
+BeanSurvey %>% 
+  mutate(yield_per_acre = BEANSHARVESTED_LR/LANDAREA) %>%
+    group_by(VILLAGE) %>%
+      summarise(mean= mean(yield_per_acre, na.rm=TRUE),
+                median=median(yield_per_acre, na.rm=TRUE),
+                standard_deviation=sd(yield_per_acre, na.rm=TRUE))
+```
+-->
+
+**Exercise 4b. How would you produce the same summary statistics, but by village AND by gender of the head of household rather than by village only?**
+
+```{r ex4b, exercise=TRUE}
+
+```
+
+
+**Exercise 5. Generate a scatterplot showing for each household who have planted beans, the total quantity of the beans planted against the land area of their farm. Color the points by gender of the head of household**
+
+```{r ex5,exercise=TRUE}
+
+```
+<!--
+```{r ex5-solution}
+BeanSurvey %>%
+  mutate(beans_planted = BEANSPLANTED_LR + BEANSPLANTED_SR)%>%
+    filter(!is.na(beans_planted)) %>%
+      ggplot(aes(x=LANDAREA, y=beans_planted, colour=GENDERHH))+
+        geom_point()
+```
+-->
+
+**Exercise 6. Generate a boxplot of the quantity of beans harvested during the long rain season by type of household composition, keeping only the two main household composition types. Apply an appropriate 'scale' transformation to the quantity of beans harvested**
+
+```{r ex6,exercise=TRUE}
+
+```
+
+<!--
+```{r ex6-solution}
+BeanSurvey %>%
+  filter(HHTYPE=="Female headed, no husband" | HHTYPE=="Male headed one wife") %>%
+    ggplot(aes(y=BEANSHARVESTED_LR, x=HHTYPE))+
+      geom_boxplot()+
+        geom_point()+
+          scale_y_continuous(trans="pseudo_log")
+
+BeanSurvey %>%
+  filter(BEANSHARVESTED_LR<150) %>%
+  ggplot(aes(x=BEANSHARVESTED_LR, y=BEANSHARVESTED_SR))+
+  geom_point()+
+  scale_y_continuous(trans="pseudo_log")
+  
+```
+-->
+
+## Appendix: 'BeanSurvey' dataset 
+
+The data we are using in this session is an extract of a survey conducted in Uganda from farmers identified as growing beans.
+
+The dataset contains an extract of 50 responses to 23 of the survey questions, and has been imported to R as a data frame called `BeanSurvey`.
+
+A summary of the columns in the dataset is below.
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+
+
+data.frame(Column=colnames(BeanSurvey),
+           Description=c("Farmer ID","Village name","Household composition","Gender of Household Head","Age of Household Head",
+                         "Occupation of Household Head","Number of Adults within the household","Number of Children (<18) within the household","Do they grow matoke?",
+                         "Do they grow maize?","Do they grow beans?","Do they grow banana?","Do they grow cassava?",
+                         "Do they grow coffee?","Land area of farm (acres)","Labor usage","Intercrops with beans",
+                         "Household decision responsibility","Do they grow beans for sale?","Quantity of beans planted in long rain season",
+                         "Quantity of beans planted in short rain season","Quantity of beans harvested in long rain season"
+                         ,"Quantity of beans harvested in short rain season")) %>% kable()
+
+```
+
+
+Spend some time exploring the full dataset embedded below, to familiarise yourself with the columns and the type of data stored within each column. You may need to refer back to this data at times during this tutorial. Remember that R is case sensitive, so you will always have to refer to the variables in this dataset exactly as they are written in the data. There is a column in this data called "GENDERHH" but there is no column in this data called "GenderHH".
+
+```{r,echo=FALSE}
+DT::datatable(BeanSurvey)
+```
+
+(You can use the arrow keys on your keyboard to scroll right in case the data table does not fit entirely on your screen)
+
+
+## Appendix: Useful reference links  
+
+
+The official dplyr documentation: <a href="https://dplyr.tidyverse.org/" target="_blank">https://dplyr.tidyverse.org/</a> 
+
+dplyr CheatSheet:<a href="https://github.com/rstudio/cheatsheets/blob/master/data-transformation.pdf" target="_blank">https://github.com/rstudio/cheatsheets/blob/master/data-transformation.pdf   </a>  
+
+Data Manipulation Tools - Rstudio video:
+<a href="https://www.youtube.com/watch?v=Zc_ufg4uW4U" target="_blank">dplyr -- Pt 3 Intro to the Grammar of Data Manipulation with R   </a> 
+
+Some documentation on subsetting r-objects using base-R: <a href="https://bookdown.org/rdpeng/rprogdatascience/subsetting-r-objects.html" target="_blank">https://bookdown.org/rdpeng/rprogdatascience/subsetting-r-objects.html </a> 
+
+
