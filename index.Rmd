@@ -1,5 +1,5 @@
 ---
-title: "Manipulating Data using dplyr: part 2"
+title: "Manipulation des données à l'aide de dplyr : partie 2"
 output: 
   learnr::tutorial:
     progressive: true
@@ -7,7 +7,7 @@ output:
     df_print: paged
 runtime: shiny_prerendered
 description: >
-  Learn to manipulate data with the package dplyr.
+  Apprenez à manipuler les données avec la librairie dplyr.
 ---
 
 
@@ -22,29 +22,27 @@ BeanSurvey<-readRDS("bean_survey.RDS")
 ```
 
 
-## Combining manipulations
+## Combiner les manipulations
 
-We've now learnt to use most of the core functions of dplyr. But their use is greatly limited by the fact that we still don't know how to combine them together. 
+Nous avons maintenant appris à utiliser la plupart des fonctions de base de dplyr. Mais leur utilisation est fortement limitée par le fait que nous ne savons toujours pas comment les combiner. 
 
 ![](https://youtu.be/skdI9iIysm0)
 
-As explained in the video, if we don't store the results of our commands, there is no way to re-use them. This is actually true for the great majority of R commands, not just those involving the core functions of dplyr. So to perform a sequence of manipulations, we need to either:
+Comme expliqué dans la vidéo, si nous ne sauvegardons pas les résultats de nos commandes, il n'y a aucun moyen de les réutiliser. Cela est en fait vrai pour la grande majorité des commandes de R, et pas seulement pour celles qui impliquent les fonctions de base du dplyr. Donc pour effectuer une séquence de manipulations, nous devons soit
 
-- store the result of each manipulation as a data frame, to then make it the first argument of the next function.
-- combine all the manipulations we want to perform into one single command using the **pipe operator**.
+- sauvegarder le résultat de chaque manipulation en un tableau de données a utiliser comme premier argument de la fonction suivante.
+- combiner toutes les manipulations que nous voulons effectuer en une seule commande à l'aide de l'opérateur **pipe** `%>%`.
 
-You already know everything there is to know to perform a sequence of manipulations via the first option.
-For example, if we wanted to calculate a couple of summary statistics on the household living in the Lwala village, we could do the following:
+Vous savez déjà tout ce qu'il y a à savoir pour effectuer une série de manipulations via la première option. Par exemple, si nous voulions calculer quelques resumes statistiques sur les ménages vivant dans le village de Lwala, nous pourrions faire ceci:
 
 ```{r sequence_1, exercise = TRUE}
 BeanSurvey_Lwala <- filter(BeanSurvey, VILLAGE=="Lwala")
 summarise(BeanSurvey_Lwala, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
 ```
-First we use `filter()` to keep only the households of "Lwala". We store the result as a new object, called "BeanSurvey_Lwala". Nothing gets printed at this stage. Then we use the `summarise()` command, but with the newly created object as the first argument instead of the full BeanSurvey dataset.
+Nous utilisons d'abord `filter()` pour ne garder que les ménages de "Lwala". Nous stockons le résultat sous la forme d'un nouvel objet, appelé "BeanSurvey_Lwala". Rien n'est affiché à la console à ce stade. Ensuite, nous utilisons la commande `summarise()`, mais avec le nouvel objet créé comme premier argument au lieu du tableau de données BeanSurvey.
 
 
-
-**Question: change the command to get summaries for the households in Kimbugu rather than Lwala. Give a sensible name to the intermediate data frame**
+**Question : changez la commande pour obtenir des résumés statistiques pour les ménages de Kimbugu plutôt que de Lwala. Donnez un nom sensé au tableau de données intermédiaire**
 
 ```{r sequence_2, exercise = TRUE}
 BeanSurvey_Lwala <- filter(BeanSurvey, VILLAGE=="Lwala")
@@ -56,36 +54,37 @@ BeanSurvey_Kimbugu <- filter(BeanSurvey, VILLAGE=="Kimbugu")
 summarise(BeanSurvey_Kimbugu, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
 ```
 
-But what if there were say, 20 villages? Doing this for each village would be very time consuming. Don't worry, there is a much better approach, using `group_by()`, the last core function of the package dplyr.
+Mais s'il y avait, disons, 20 villages, faire cela pour chaque village prendrait beaucoup de temps. Ne vous inquiétez pas, il y a une bien meilleure approche, en utilisant `group_by()`, la dernière des principales fonctions du package dplyr.
 
 
 ## group_by()
 
-`group_by()` tells R to separate a dataset into groups, based on the values of a column. All the subsequent operations performed on the resulting "grouped" dataset are applied to each group rather than to the whole dataset. For the syntax, we indicate the dataset first, as usual, and then we indicate the column whose values will define our groups. Let's group our dataset by village
+`group_by()` demande à R de diviser virtuellement un tableau de donnees en groupes, selon les valeurs d'une ou plusieurs colonnes. Toutes les opérations ultérieures effectuées sur le tableau de données "groupé" sont alors appliquées à chacun des groupe plutôt qu'au tableau de donnees entier. Pour la syntaxe, nous indiquons d'abord le tableau de données, comme d'habitude, puis nous indiquons la ou les colonnes dont les valeurs définiront nos groupes. Regroupons notre jeu de données par village:
 
 ```{r group_1, exercise = TRUE}
 group_by(BeanSurvey, VILLAGE)
 
 ```
-Let's see... 50 rows, 23 columns, original order of these rows and columns... Well it looks like nothing happened to our dataset. But it's just because the grouping is invisible. We need to apply another function to see the effect of `group_by()`. Let's store our grouped data frame in an object called say, "BeanSurvey_ByVillage", and let's use this object as the first argument of the function `summarise()`
+Voyons voir... 50 lignes, 23 colonnes, l'ordre des lignes et colonnes n'a pas changé... On dirait que rien n'a changé dans notre tableau de données. Mais c'est juste parce que la division en different groupes est invisible. Nous devons appliquer une autre fonction pour voir l'effet de `group_by()`. Sauvegardons notre tableau de données groupé dans un objet appelé "BeanSurvey_ByVillage", et utilisons cet objet comme premier argument de la fonction `summarise()`.
 
 ```{r group_2, exercise = TRUE}
 BeanSurvey_ByVillage <- group_by(BeanSurvey, VILLAGE)
 summarise(BeanSurvey_ByVillage, households=n(), mean_land=mean(LANDAREA), grow_beans= sum(BEANS=="Yes"))
 ```
 
-Yes, now our `summarise()` command returns two rows instead of one: one row of summaries per village!
+Oui, maintenant notre commande `summarise()` renvoie deux lignes au lieu d'une : une ligne de résumés statistiques par village !
 
-The effect of `group_by()` on the result of `summarise()` is very intuitive. We obtain the calculated summaries for each of the groups defined by the function `group_by()`. At first, it might be slightly less obvious that `group_by()` is also very useful in combination with `filter()` or `mutate()`. But consider the case where we would like to retrieve for each village the information of the household that has harvested the highest quantity of beans in long rain season. With filter, we can easily get the household that has harvested the highest quantity of beans during the long rain season in the full dataset:
+L'effet de la commande `group_by()` sur le résultat de `summarise()` est très intuitif. Nous obtenons les résumés calculés pour chacun des groupes définis par la fonction `group_by()`. Au début, il pourrait être un peu moins évident que `group_by()` est aussi très utile en combinaison avec `filter()` ou `mutate()`. Mais considérons le cas où nous voudrions savoir pour chaque village quel est le ménage qui a récolté la plus grande quantité de haricots pendant la longue saison des pluies. Avec `filter()`, nous pouvons facilement obtenir le ménage qui a récolté la plus grande quantité de haricots pendant la saison des pluies dans tout le tableau de données en faisant ceci :
+
 ```{r group_4, exercise = TRUE}
 filter(BeanSurvey, BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE))
 
 ```
-Note that there is one value that is missing in the column `BEANSHARVESTED_LR`, so we need to use `na.rm=TRUE` like for the function `mean()` earlier.
+Notez qu'il y a une valeur manquante dans la colonne `BEANSHARVESTED_LR`, donc nous devons utiliser `na.rm=TRUE` comme pour la fonction `mean()` précédemment.
 
-But the highest production of beans during long rain season comes from a household in *Kimbugu*. In Lwala, the highest production is smaller than that and so it is not captured by our filter function.
+La plus grande production de haricots pendant la saison des pluies provient d'un ménage de Kimbugu. A Lwala, la production la plus élevée est plus faible que cela et n'est donc pas renvoyée par notre fonction `filter()`.
 
-Using `group_by()` first, and *then* `filter()` would restrict the scope of `BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE)` to each village, and so if a household has the highest production in this village, filter will retrieve it.
+L'utilisation de `group_by()`, puis ensuite de `filter()` limiterait la portée de la commande `BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRUE)` à chaque village, et donc si un ménage a la production la plus élevée dans ce village, il sera cette fois selectionné par `filter()`.
 
 ```{r group_4a, exercise = TRUE}
 BeanSurvey_ByVillage <- group_by(BeanSurvey, VILLAGE)
@@ -94,7 +93,7 @@ filter(BeanSurvey_ByVillage, BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRU
 ```
 
 
-**Question: Calculate the number of household and average land area for each type of household composition (column HHTYPE). What do we seem to see?**
+**Question : Calculez le nombre de ménages et la superficie moyenne des terres pour chaque type de composition du ménage (colonne HHTYPE). Qu'est-ce qu'on peut observer?**
 ```{r group_4b, exercise = TRUE}
 
 
@@ -103,21 +102,21 @@ filter(BeanSurvey_ByVillage, BEANSHARVESTED_LR==max(BEANSHARVESTED_LR, na.rm=TRU
 ```{r group_4b-solution}
 BeanSurvey_ByHHType<-group_by(BeanSurvey, HHTYPE)
 summarise(BeanSurvey_ByHHType, households=n(), averageArea=mean(LANDAREA))
-# There are two main household composition in the dataset: Female headed, no husband (13 households), and Male headed one wife (27 households)
-# The households of the second type seem to have the largest lands in average
+# Il y a deux types de compositions de ménages principaux dans nos données : Femmes chefs de famille, sans mari (13 ménages), et hommes chefs de menage avec une seule femme (27 ménages)
+# Les ménages du deuxième type semblent posséder les plus grandes terres en moyenne
 
 ```
 
-We have learnt about the very useful `group_by()` function and we have a descent way to combine two manipulations together. So far, so good. But what if we wanted to perform more than two manipulations? What if, for example, we wanted to keep in our dataset only those household who grow beans and then, to calculate for each village the average yield per acre in long rain season? It doesn't sound too complicated, but we need to use four functions:
+Nous avons appris à utiliser la fonction `group_by()` et nous avons une methode pour combiner deux manipulations ensemble. Jusqu'ici, tout va bien. Mais que faire si nous voulons effectuer plus de deux manipulations ? Et si, par exemple, nous voulions garder dans notre tableau de données uniquement les ménages qui cultivent des haricots et ensuite, calculer pour chaque village le rendement moyen par acre pendant la longue saison des pluies ? Cela ne semble pas trop compliqué, mais nous devons utiliser quatre fonctions :
 
-- `filter()` to get rid of the households that don't grow beans
-- `mutate()` to calculate the yield per acre of each household
-- `group_by()` to group our data by village
-- `summarise()` to calculate the average yield per acre by village.
+- `filter()` pour ne garder que les ménages qui cultivent des haricots
+- `mutate()` pour calculer le rendement par acre de chaque ménage
+- `group_by()` pour grouper nos données par village
+- `summarise()` pour calculer le rendement moyen par acre par village.
 
-And after each manipulation, we need to save the result as a new data frame that will be used as the input for the next function.
+Et après chaque manipulation, nous devons enregistrer le résultat sous la forme d'un nouveau tableau de données qui sera utilisée comme premier argument de la fonction suivante.
 
-This would do the job:
+Le code suivant pourrait faire l'affaire :
 
 ```{r group_5, exercise = TRUE}
 BeanSurvey_filtered <- filter(BeanSurvey, BEANS=="Yes")
@@ -126,7 +125,9 @@ BeanSurvey_grouped_by<- group_by(BeanSurvey_mutated, VILLAGE)
 summarise(BeanSurvey_grouped_by, households=n(), avg_yield_per_acre=mean(yield_per_acre, na.rm=TRUE))
 
 ```
-The code above starts to be quite messy, with lots of intermediate data frames that we are not really interested in. One thing you may suggest to simplify our set of commands is to have only one intermediate data frame, that we overwrite. Something like that:
+
+Mais ce code commence à être un peu complique, avec beaucoup de tableaux de données intermédiaires qui ne nous intéressent pas vraiment. Une chose que vous pourriez avoir en tete pour simplifier cet ensemble de commandes est de n'avoir qu'un seule tableau de données intermédiaire, que nous remplacons a chaque manipulation, par le resultat de la manipulation d'apres. Quelque chose comme cela :
+
 ```{r group_7, exercise = TRUE}
 temp_data <- filter(BeanSurvey, BEANS=="Yes")
 temp_data <- mutate(temp_data, yield_per_acre = BEANSHARVESTED_LR/LANDAREA)
@@ -135,35 +136,35 @@ summarise(temp_data, households=n(), avg_yield_per_acre=mean(yield_per_acre, na.
 
 ```
 
-It looks slightly simpler maybe, and show you that when creating objects with `<-`, it makes no difference whether the name of the object is new or not. If it is not new, R will just overwrite the old object.
+Cela semble peut-être un peu plus simple, et vous montre que lorsque vous créez des objets avec " <- ", il n'y a pas de différence si le nom de l'objet est nouveau ou non. S'il n'est pas nouveau, R remplacera simplement l'ancien objet par celui que vous venez de creer
 
-But this way of overwriting objects over and over is definitely not good practice, as in some situations you may end up loosing valuable data. We don't need to use such approach though. We can make our command much more clean and readable if we use the pipe operator!
+Mais cette façon de remplacer les objets encore et encore n'est certainement pas une bonne pratique, car dans certaines situations, vous risquez de perdre des données précieuses. Nous n'avons cependant pas besoin d'utiliser une telle approche. Nous pouvons rendre notre commande beaucoup plus propre et lisible si nous utilisons l'opérateur appelé `pipe` (prononcé païpe) !
 
 
-## pipe %>%
+## L'opérateur "pipe" %>%
 
-The symbol used for the pipe operator in R is `%>%`, that is a symbol greater than `>` surrounded by two percentages `%`. This operator is extremely useful because it makes it possible to perform a sequence of data manipulations using dplyr functions, without having to create any intermediate data frame. This is due to the consistent syntax of these dplyr functions, and in particular, the fact that their first argument is always the data fame that we want to manipulate.
+Le symbole utilisé pour l'opérateur `pipe` (qu'on traduirait par tuyau en francais) dans R est `%>%`, c'est-à-dire un symbole supérieur à ">" entouré de deux pourcentages "%". Cet opérateur est extrêmement utile car il permet d'effectuer une séquence de manipulations de données à l'aide de fonctions dplyr, sans avoir à créer de tableau de données intermédiaire. Ceci est dû à la syntaxe cohérente de ces fonctions dplyr, et en particulier au fait que leur premier argument est toujours le tableau de données que l'on veut manipuler.
 
-Because what the pipe operator does is to tell R
+Car ce que fait l'opérateur "pip", c'est dire à R
 
-> take what's on my left, and make it the first argument of the next function on my right (or below me)
+> prends ce qui est à ma gauche et fais-en le premier argument de la prochaine fonction à ma droite (ou en dessous de moi)
 
-So if in the command `thing1 %>% thing2`, `thing1` is a data frame and `thing2` is a dplyr function, the pipe operator will ask R to make the data frame the first argument of the dplyr function. And R will happily perform the corresponding manipulation on the data frame since it results in a valid command.
+Donc si dans la commande `chose1 %>% chose2`, `chose1` est un tableau de données et `chose2` est une fonction dplyr, alors, l'opérateur "pipe" demandera à R de faire du tableau de données `chose1` le premier argument de la fonction dplyr `chose2`. R pourra alors effectuer la manipulation correspondante sur le tableau de données puisque le resultat est une commande valide.
 
 ```{r pipe_1, exercise = TRUE}
 BeanSurvey %>% filter(BEANS=="Yes")
 
 ```
 
-In the above commands, the pipe operator asks R to take what's on its left - the data frame `BeanSurvey` - and to make it the first argument of what's on its right - the function `filter()`.
-The command is therefore equivalent to
+Dans les commandes ci-dessus, l'opérateur "pipe" demande à R de prendre ce qui est à sa gauche - le tableau de données `BeanSurvey` - et d'en faire le premier argument de ce qui est à sa droite - la fonction `filter()`.
+La commande est donc équivalente à :
 
 ```{r pipe_1b, exercise = TRUE}
 filter(BeanSurvey, BEANS=="Yes")
 
 ```
 
-Instead of placing the function filter to the right of the pipe, we can, and usually should place it below the pipe, with a little indentation, similar to what you do with the `+` in ggplot2. It's good practice for readability, and it doesn't change anything. R will see the pipe and look for the next command. This command happens to be below the pipe rather than on its right.
+Au lieu de placer la fonction `filter()` à droite du pipe, nous pouvons, et devrions généralement, le placer dessous, avec une petite indentation, comme ce que l'on a fait avec le "+" dans ggplot2. Cela ne change rien pour R et c'est une bonne pratique pour la lisibilité. R verra le "pipe" et cherchera la commande suivante. Que cette commande se trouve en dessous du "pipe" plutôt que sur sa droite, ne pose aucun problème:
 
 ```{r pipe_2, exercise = TRUE}
 BeanSurvey %>% 
@@ -172,10 +173,11 @@ BeanSurvey %>%
 ```
  
 
-What is great with pipes is that the *what's on my left* can well be a command itself, if the result of the command is a data frame. So we can redo the last commands of the previous section, using pipes.
+Ce qui est génial avec les "pipe", c'est que "**ce qui est à ma gauche**" peut très bien être une commande elle-même si le résultat de la commande est un tableau de données. On peut donc réécrire l'ensemble de commandes de la section précédente, en utilisant des "pipe".
 
 
-Our commands were
+Notre code était ceci:
+
 ```{r pipe_2b, exercise = TRUE}
 BeanSurvey_filtered <- filter(BeanSurvey, BEANS=="Yes")
 BeanSurvey_mutated <- mutate(BeanSurvey_filtered, yield_per_acre = BEANSHARVESTED_LR/LANDAREA)
@@ -185,7 +187,7 @@ summarise(BeanSurvey_grouped_by, households=n(), avg_yield_per_acre=mean(yield_p
 ```
 
 
-Using pipes it becomes:
+En utilisant des "pipes", voila ce qu'il devient :
 
 ```{r pipe_3, exercise = TRUE}
 BeanSurvey %>% 
@@ -196,12 +198,13 @@ BeanSurvey %>%
 
 ```
 
-We start with the dataset `BeanSurvey`. The pipe next to it will make it the first argument of the function `filter()` that follows. The next pipe makes the resulting command the first argument of the function `mutate()`. The next pipe takes the result of all of this and make it the first argument of the next function, which is `group_by()`. And the last pipe makes the resulting data frame, the first argument of the function `summarise()`. Here we go. We have a neat command that doesn't require the creation of intermediate data frames! Note that when using pipes, the output from the previous line always takes the place of the ‘data’ argument. So when using the commands with the pipes, we skip straight to the second argument.
+Sur la premiere ligne nous placons notre tableau de données "BeanSurvey". Le "pipe" à côté en fera le premier argument de la fonction `filter()` juste en dessous. Le "pipe" suivant fait de la commande résultante le premier argument de la fonction `mutate()`. Le "pipe" suivant prend le résultat de tout cela et en fait le premier argument de la fonction suivante, qui est `group_by()`. Et le dernier "pipe" fait du tableau de données résultant, le premier argument de la fonction `summarise()`. Et voilà. Nous avons une commande plus concise et lisible, qui ne nécessite pas la création de tableau de données intermédiaires ! Notez que lorsque vous utilisez des "pipes", la sortie de la ligne précédente prend toujours la place de l'argument "data" dans la commande qui suit. Ainsi, lorsque nous utilisons des "pipe", nous passons directement au deuxième argument.
 
 
-And that's where things start to be very interesting. Because with pipes, it is not a pain anymore to perform a long sequence of manipulations. So we can really start to have fun!
+Et c'est là que les choses commencent à être très intéressantes. Parce qu'avec les "pipes", ce n'est plus un problème d'effectuer une longue séquence de manipulations. On peut donc vraiment commencer à s'amuser !
 
-**Question: Find the pipe equivalent of the command below**
+
+**Question : Trouvez l'équivalent en "pipe" de la commande ci-dessous**
 
 ```{r pipe_4, exercise = TRUE}
 filter(BeanSurvey, OCCUHH!="Farmer")
@@ -215,44 +218,53 @@ BeanSurvey %>%
 ```
 
 
-## More pipes!
+## A fond les "pipes" !
 
 
-Pipes are great, but they require some time to get used to it. So let's practice and learn a few more things along the way.
+Les "pipes", c'est bien, mais il faut un certain temps pour s'y habituer. On va donc s'entraîner et apprendre quelques petites autres choses en cours de route.
 
-Something I'm wondering is whether the household composition vary by village and gender of household head. I didn't mention it earlier, but we can group by more than one column. We just need to list the corresponding columns within the `group_by()` function, separated with commas:
+Je me demande si la composition des ménages varie selon le village et le sexe du chef de ménage. Je ne l'ai pas mentionné plus tôt, mais nous pouvons regrouper un tableau de données en utilisant `group_by()` par plus d'une colonne. Il nous suffit de lister les colonnes correspondantes, séparées par des virgules :
 ```{r pipe_5, exercise = TRUE}
 BeanSurvey %>%
   group_by(VILLAGE, GENDERHH) %>%
     summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
 ```
-In the command above, I placed a pipe right after the data frame BeanSurvey to tell R that this data frame should be the first argument of the group_by function below. And so the two first lines are grouping the BeanSurvey dataset by village and gender of the head of household. Then I placed a second pipe right after the `group_by()` functon so that the resulting grouped data frame becomes the first argument of the summarise function, where we calculate the number of households and average number of adults and children.
 
-You probably noticed that we have one weird row with an NA value in the column GENDERHH. This row corresponds to the household whose value for GENDERHH is missing. When grouping the data by gender of head of household, R has created an extra group because it doesn't know in which group this household with missing GENDERHH should be placed. I suggest we just remove this household from this analysis by using `filter()` at the beginning of our command. let's see...
+Dans la commande ci-dessus, j'ai placé un "pipe" juste après le tableau de données BeanSurvey pour dire à R que ce tableau de données doit être le premier argument de la fonction `group_by` en dessous. Et donc les deux premières lignes regroupent le jeu de données BeanSurvey par village et par sexe du chef de ménage. Ensuite, j'ai placé un second "pipe" juste après la fonction `group_by()` de sorte que le tableau de données "groupé" qui en résulte devienne le premier argument de la fonction `summarise`, où nous calculons le nombre de ménages et le nombre moyen d'adultes et d'enfants.
 
-This was the command we used earlier to keep only the household for which the head of household's gender was missing:
+Vous avez probablement remarqué que nous avons une ligne bizarre avec une valeur NA dans la colonne GENDERHH. Cette ligne correspond au ménage dont la valeur pour GENDERHH est manquante. En regroupant les données par sexe du chef de ménage, R a créé un groupe supplémentaire car il ne sait pas dans quel groupe ce ménage dont la valeur pour GENDERHHH est manquante doit être placé. Je suggère que nous supprimions simplement ce ménage de cette analyse en utilisant `filter()` au début de notre commande. voyons cela...
+
+La commande que nous avons utilisé auparavant pour ne garder que le ménage pour lequel le sexe du chef de famille était manquant était :
+
 ```{r pipe_5c, exercise = TRUE}
 filter(BeanSurvey, is.na(GENDERHH)==TRUE)
 ```
 
-So conversely, to keep the rows that are **not** missing, we can simply change the TRUE into FALSE:
+Donc, inversement, pour garder les lignes qui ne sont **pas** manquantes, nous pouvons simplement changer le `TRUE` en `FALSE` :
+
 ```{r pipe_5d, exercise = TRUE}
 filter(BeanSurvey, is.na(GENDERHH)==FALSE)
 ```
-Let's now use a pipe to group the resulting data frame by VILLAGE and GENDERHH:
+
+Utilisons maintenant un pipe pour grouper le tableau de données résultant par VILLAGE et GENDERHHH :
+
 ```{r pipe_5e, exercise = TRUE}
 filter(BeanSurvey, is.na(GENDERHH)==FALSE) %>%
   group_by(VILLAGE, GENDERHH)
 ```
-No change to the output, but we knew that since the effect of `group_by()` is invisible unless we add some other function. In our case, we want to add a `summarise()` function:
+
+Pas de changement à la sortie, mais nous savons que l'effet de `group_by()` est invisible à moins que nous ajoutions une autre fonction. Dans notre cas, nous voulons ajouter une fonction `summarise()` :
+
 ```{r pipe_5f, exercise = TRUE}
 filter(BeanSurvey, is.na(GENDERHH)==FALSE) %>%
   group_by(VILLAGE, GENDERHH) %>%
     summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
 ```
-Yes! We got it!
 
-To make our command even neater let's use a pipe between our data frame and the `filter()` function:
+Nous obtenons le résultat attendu!
+
+Pour rendre notre commande encore plus claire, utilisons un autre "pipe" entre notre tableau de données et la fonction `filter()` :
+
 ```{r pipe_5g, exercise = TRUE}
 BeanSurvey %>%
   filter(is.na(GENDERHH)==FALSE) %>%
@@ -260,19 +272,20 @@ BeanSurvey %>%
       summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
 ```
 
-Of course, if we want to store the result of our full command into a data frame object for later use, we can do so in the usual way:
+Bien sûr, si nous voulons stocker le résultat de notre commande complète dans un objet de tableau de donées pour une utilisation ultérieure, nous pouvons le faire de la manière habituelle :
+
 ```{r pipe_6, exercise = TRUE}
 summary_data <- BeanSurvey %>%
   filter(is.na(GENDERHH)==FALSE) %>%
     group_by(VILLAGE, GENDERHH) %>%
       summarise(households=n(), avg_adults = mean(ADULTS), avg_child = mean(CHILDREN))
 ```
-Nothing gets printed, but `summary_data` is saved as a data frame object, so after such command, we could look at it by calling it by name.
+Rien n'est affiché dans la console, mais `summary_data` est enregistré dans R comme un nouveau tableau de données. Ainsi, après une telle commande, nous pouvons l'examiner en l'appelant par son nom.
 
 
-But we don't necessarily need to store our result to combine it with other functions. We can often directly *pipe* it into these other functions, even if these functions are not part of `dplyr`. That's because pipe is so popular that lots of the most recent packages provide functions that are compatible with pipes. For example, as said in the video, the first argument of the `ggplot()` function is a data frame, so `ggplot()` is compatible with pipes! 
+Mais nous n'avons pas nécessairement besoin de stocker notre résultat pour le combiner avec d'autres fonctions. Nous pouvons souvent enchainer avec un autre *pipe* vers ces autres fonctions, même si ces fonctions ne font pas partie de `dplyr`. C'est parce que "pipe" est devenu tellement populaire que beaucoup des packages les plus récents fournissent des fonctions qui sont compatibles avec des "pipes." Par exemple, comme dit dans la vidéo, le premier argument de la fonction `ggplot()` est un tableau de données, donc `ggplot()` est compatible avec les pipes ! 
 
-Let's make a scatter plot from the result of our last command: 
+Faisons un nuage de point à partir du résultat de notre dernière commande : 
 
 ```{r pipe_7, exercise = TRUE}
 BeanSurvey %>%
@@ -282,14 +295,15 @@ BeanSurvey %>%
         ggplot(aes(x=VILLAGE, y=avg_adults, fill=GENDERHH))+
           geom_col(position = "dodge")
 ```
-`geom_col` is similar to `geom_bar`, except that instead of the height of the bars being calculated from the frequencies of the categories in the data, in `geom_col` this height is directly defined by a y aesthetics. W added the argument `position = "dodge"` to place the bars side by side rather than stacked, as the latter would not make much sense in this case.
 
-It's not the best graph ever, but it is still pretty neat, no? And did you notice how we didn't indicate our usual first argument in the `ggplot()` function? That's because the pipe operator told R to use the result of the `summarise()` function as the data frame for the graph!
+Notez que `geom_col` est similaire a `geom_bar`, sauf qu'au lieu que la hauteur des barres soit calculée à partir des fréquences des catégories dans les données, dans `geom_col` cette hauteur est directement définie par une esthétique y. Nous avons aussi ajouté l'argument `position = "dodge"` pour placer les barres côte à côte plutôt qu'empilées, car sinon notre graphique n'aurait pas beaucoup de sens.
+
+Ce n'est pas le meilleur graphique qui soit, mais le fait de pouvoir enchainer avec un graphique apres un `pipe` est plutot joli, non ? Et avez-vous remarqué que nous n'avons pas indiqué notre premier argument habituel dans la fonction `ggplot()` ? C'est parce que l'opérateur pipe a dit à R d'utiliser le résultat de la fonction `summarise()` comme tableau de données pour le graphique !
 
 
-Also note that we are always writing commands like the one above sequentially, one step at a time. Each individual step was easy and we can feel satisfied with the end product but trying to get there in one move would have been very difficult!
+Notez également que nous écrivons toujours les commandes comme celle ci-dessus de manière séquentielle, une étape à la fois. Chaque étape a été facile et nous pouvons être satisfaits du produit final, mais il aurait été très difficile d'arriver a ecrire notre commande en une seul fois !
 
-**Question: Produce a boxplot of the household sizes for each village using pipes**
+**Question : Produisez une graphique en boîte à moustache de la taille des ménages par village en utilisant des pipes**
 
 ```{r pipe_8, exercise = TRUE}
 
@@ -302,8 +316,8 @@ BeanSurvey %>%
     filter(household_size<16) %>%
       ggplot(aes(x=VILLAGE, y=household_size)) +
         geom_boxplot()
-# the filter() line was not needed, but I decided to remove the extreme household
-# to show you how easy and intuitive it is to add bits of line to a command using pipes
+# la commande filter() n'était pas nécessaire ici, mais j'ai décidé de supprimer le ménage qui avait un nombre de membre extrême
+# pour vous montrer combien il est facile et intuitif d'ajouter des commandes supplementaires en utilisant les "pipes"
 ```
 
 
@@ -314,26 +328,26 @@ BeanSurvey %>%
 *Question 1*
 
 ```{r Q1, echo=FALSE}
-question("What dplyr function is used to create or modify columns of a dataset?",
-  answer("select()", message="select is used to retrieve columns"),
-  answer("filter()", message="filter is used to retrieve rows"),
-  answer("arrange()", message="arrange is used to order rows"),
-  answer("summarise()", message="summarise is used to create summaries"),
+question("Quelle fonction dplyr est utilisée pour créer ou modifier les colonnes d'un tableau de données?",
+  answer("select()", message="select est utilisé pour sélectionner des colonnes"),
+  answer("filter()", message="filter est utilisé pour enlever des lignes"),
+  answer("arrange()", message="arrange est utilisé pour réordonner les lignes"),
+  answer("summarise()", message="summarise est utilisé pour créer des résumés statistiques"),
   answer("mutate()",correct=TRUE),
-  answer("group_by()", message="group_by is used to group rows based on some columns"), allow_retry = TRUE,random_answer_order = TRUE
+  answer("group_by()", message="group_by est utilisé pour grouper des lignes en fonction de certaines colonnes"), allow_retry = TRUE,random_answer_order = TRUE
 )
 ```
 
 *Question 2*
 
 ```{r Q2, echo=FALSE}
-question("Which dplyr functions could be responsible for having an output with fewer columns than the original dataset? (select ALL that apply)",
+question("Quelles fonctions de dplyr pourraient être responsables d'une sortie avec moins de colonnes que dans le jeu de données original ? (sélectionnez TOUTES les bonnes reponses)",
   answer("select()", correct = TRUE),
-  answer("filter()", message="with filter it's the number of rows that gets reduced."),
-  answer("arrange()", message="arrange does not affect the number of rows or columns."),
+  answer("filter()", message="Avec filter, c'est le nombre de lignes qui est réduit."),
+  answer("arrange()", message="arrange n'affecte pas le nombre de lignes ou de colonnes."),
   answer("summarise()", correct = TRUE),
-  answer("mutate()", message="mutate can only increase the number of columns - actually there's one way to delete columns using mutate, but for this quiz, we'll assume we can't."),
-  answer("group_by()", message="group_by does not affect the number of rows or columns"), allow_retry = TRUE,random_answer_order = TRUE
+  answer("mutate()", message="mutate ne peut qu'augmenter le nombre de colonnes - en fait, il y a une façon de supprimer des colonnes en utilisant mutate, mais pour ce quiz, nous supposerons que nous ne pouvons pas."),
+  answer("group_by()", message="group_by n'affecte pas le nombre de lignes ou de colonnes"), allow_retry = TRUE,random_answer_order = TRUE
 )
 ```
 
@@ -342,11 +356,11 @@ question("Which dplyr functions could be responsible for having an output with f
 *Question 3*
 
 ```{r Q3, echo=FALSE}
-question("Which of these commands is correct, if I want to retrieve the households from Lwala",
-  answer("filter(BeanSurvey, Village=='Lwala')", message="there is no column 'Village' in the dataset"),
+question("Laquelle de ces commandes est correct, si je veux garder seulement les ménages de Lwala",
+  answer("filter(BeanSurvey, Village=='Lwala')", message="il n'y a pas de colonne 'Village' dans le tableau de données"),
   answer("filter(BeanSurvey, VILLAGE=='Lwala')", correct = TRUE),
-  answer("filter(BeanSurvey, Village='Lwala')", message="there is no column 'Village' in the dataset and the single equals sign '=' is used to assign values or objects to names"),
-  answer("filter(BeanSurvey, VILLAGE='Lwala')", message="the single equals sign '=' is used to assign values or objects to names"), allow_retry = TRUE,random_answer_order = TRUE
+  answer("filter(BeanSurvey, Village='Lwala')", message="il n'y a pas de colonne 'Village' dans le tableau de données et le signe égal simple '=' est utilisé pour attribuer des valeurs ou des noms aux objets"),
+  answer("filter(BeanSurvey, VILLAGE='Lwala')", message="le signe égal simple '=' est utilisé pour attribuer des valeurs ou des noms aux objets"), allow_retry = TRUE,random_answer_order = TRUE
 )
 ```
 
@@ -361,10 +375,10 @@ summarise(BeanSurvey_grouped, avg_landArea = mean(LANDAREA))
 ```
 
 ```{r Q4, echo=FALSE}
-question("What should I add to the above command to obtain the average land area for each age class of the head of household",
-  answer("`arrange(LANDAREA)` in between the two functions", message="look at the second line - we use the data BeanSurvey_grouped, but it is not defined yet"),
-  answer("`BeanSurvey_grouped <-` in front of the function group_by()", correct=TRUE),
-  answer("`%>%` after the function group_by()", message="it could work, but we'd also need to remove the data from the function summarise()"), allow_retry = TRUE,random_answer_order = TRUE
+question("Que dois-je ajouter à la commande ci-dessus pour obtenir la superficie moyenne des terres pour chaque classe d'âge du chef de famille",
+  answer("`arrange(LANDAREA)` entre les deux fonctions", message="regardez la deuxième ligne - nous utilisons le tableau de donnees BeanSurvey_grouped, mais il n'esy pas encore défini!"),
+  answer("`BeanSurvey_grouped <-` devant la fonction group_by()", correct=TRUE),
+  answer("`%>%` après la fonction group_by()", message="cela pourrait fonctionner, mais il faudrait aussi supprimer le tableau de donnees BeanSurvey_grouped de la fonction summarise()"), allow_retry = TRUE,random_answer_order = TRUE
 )
 ```
 
@@ -380,11 +394,11 @@ BeanSurvey %>%
 
 ```
 ```{r Q5, echo=FALSE}
-question("What is the output of the above command (try to find the answer without running the command)",
-  answer("it shows for each size of household in the dataset, the number of household whose head is a farmer", correct=TRUE),
-  answer("It shows the size of household of each head of household whose occupation is non-missing", message="the function is.na() is applied to the household size, not the occupation"),
-  answer("It shows the number of non-missing values for each type of occupation of the head of household", message="look at the function filter. It is keep only the households whose head of household is a farmer"),
-  answer("An error, as n is not part of the dataset", message="There is no error in the output. n is created by the function n(), which counts the number of rows."), allow_retry = TRUE,random_answer_order = TRUE
+question("Quel est le résultat de la commande ci-dessus (essayez de trouver la réponse sans lancer la commande)",
+  answer("il indique, pour chaque taille de ménage dans le jeu de données, le nombre de ménages dont le chef est un agriculteur", correct=TRUE),
+  answer("Il indique la taille du ménage de chaque chef de ménage dont l'occupation n'est pas manquant", message="la fonction is.na() est appliquée à la taille du ménage, et non à l'occupation"),
+  answer("Il indique le nombre de valeurs non manquantes pour chaque type d'occupation du chef de ménage", message="regardez la fonction filter, elle ne retient que les ménages dont le chef de famille est un agriculteur"),
+  answer("Une erreur, car *n* ne fait pas partie du jeu de données", message="Il n'y a pas d'erreur dans la sortie. *n* est créé par la fonction n(), qui compte le nombre de lignes."), allow_retry = TRUE,random_answer_order = TRUE
 )
 ```
 
@@ -392,9 +406,9 @@ question("What is the output of the above command (try to find the answer withou
 
 
 
-## Exercises
+## Exercices
 
-**Exercise 1. retrieve the households that grow banana**
+**Exercice 1. Affichez les ménages qui cultivent la banane**
 
 ```{r ex1,exercise=TRUE,error=TRUE}
 
@@ -406,7 +420,7 @@ filter(BeanSurvey, BANANA=="Yes")
 ```
 -->
 
-**Exercise 2. Identify and correct the four mistakes that I made in the command below, to obtain the median land area of farm of all the households in the BeanSurvey dataset**
+**Exercice 2. Identifiez et corrigez les quatre erreurs que j'ai commises dans la commande ci-dessous, pour obtenir la surface agricole médiane de tous les ménages du tableau de données BeanSurvey**
 
 ```{r ex2,exercise=TRUE,error=TRUE}
 BeanSurvey %>%
@@ -420,14 +434,14 @@ BeanSurvey %>%
   filter(OCCUHH=="Farmer") %>%
    summarize(median_landArea = median(LANDAREA))
 
-# 1- either BeanSurvey should be removed from filter, or the first line should be deleted
-# 2- the condition of the filter function needs a double equals
-# 3- the function summarise was misspelled
-# 4- the parenthesis of the function summarise was not closed
+# 1- soit BeanSurvey doit être retiré d filter, soit la première ligne doit être supprimée
+# 2- la condition testee dans la fonction filter a besoin d'un double égal
+# 3- la fonction summarise a été mal orthographiée - il y a deux m ! (s ou z ne change rien)
+# 4- la parenthèse de la fonction summarise() n'a pas été fermée
 ```
 -->
 
-**Exercise 3. which are the 4 households who planted the largest quantity of beans during short rain season?**
+**Exercice 3. Quels sont les 4 ménages qui ont planté la plus grande quantité de haricots pendant la courte saison des pluies ?**
 
 ```{r ex3, exercise=TRUE}
 
@@ -443,7 +457,7 @@ BeanSurvey %>%
 
 
 
-**Exercise 4. What is the mean, median and standard deviation of the yield of bean per acre that households harvested during the long rain season in each village**
+**Exercice 4. Quelle est la moyenne, la médiane et l'écart-type du rendement en haricots par acre que les ménages ont récolté durant la longue saison des pluies dans chaque village**
 
 ```{r ex4, exercise=TRUE}
 
@@ -460,14 +474,14 @@ BeanSurvey %>%
 ```
 -->
 
-**Exercise 4b. How would you produce the same summary statistics, but by village AND by gender of the head of household rather than by village only?**
+**Exercice 4b. Comment produiriez-vous les mêmes résumés statistiques, mais par village ET par sexe du chef de ménage plutôt que par village seulement?**
 
 ```{r ex4b, exercise=TRUE}
 
 ```
 
 
-**Exercise 5. Generate a scatterplot showing for each household who have planted beans, the total quantity of the beans planted against the land area of their farm. Color the points by gender of the head of household**
+**Exercice 5. Créez un nuage de points montrant, pour chaque ménage ayant planté des haricots, la quantité totale de haricots plantée par rapport à la superficie de leur exploitation. Colorez les points selon le sexe du chef de ménage**
 
 ```{r ex5,exercise=TRUE}
 
@@ -482,7 +496,7 @@ BeanSurvey %>%
 ```
 -->
 
-**Exercise 6. Generate a boxplot of the quantity of beans harvested during the long rain season by type of household composition, keeping only the two main household composition types. Apply an appropriate 'scale' transformation to the quantity of beans harvested**
+**Exercice 6. Générez un boxplot de la quantité de haricots récoltée pendant la longue saison des pluies par type de composition du ménage, en ne gardant que les deux principaux types de composition du ménage.**
 
 ```{r ex6,exercise=TRUE}
 
@@ -503,51 +517,52 @@ BeanSurvey %>%
   geom_point()+
   scale_y_continuous(trans="pseudo_log")
   
+La transformation "pseudo-log" à la quantité de haricots récoltés parait etre appropriée 
+  
 ```
 -->
 
-## Appendix: 'BeanSurvey' dataset 
+## Appendix: Jeu de données 'BeanSurvey'
 
-The data we are using in this session is an extract of a survey conducted in Uganda from farmers identified as growing beans.
+Les données que nous utilisons dans cette session sont un extrait d'une enquête menée en Ouganda auprès d'agriculteurs identifiés comme cultivant des haricots.
 
-The dataset contains an extract of 50 responses to 23 of the survey questions, and has been imported to R as a data frame called `BeanSurvey`.
+Le jeu de données contient un extrait de 50 réponses à 23 des questions de l'enquête, et a été importé dans R en tant que tableau de données appelée "BeanSurvey".
 
-A summary of the columns in the dataset is below.
+Un résumé des colonnes du jeu de données est présenté ci-dessous.
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE}
 
 
 data.frame(Column=colnames(BeanSurvey),
-           Description=c("Farmer ID","Village name","Household composition","Gender of Household Head","Age of Household Head",
-                         "Occupation of Household Head","Number of Adults within the household","Number of Children (<18) within the household","Do they grow matoke?",
-                         "Do they grow maize?","Do they grow beans?","Do they grow banana?","Do they grow cassava?",
-                         "Do they grow coffee?","Land area of farm (acres)","Labor usage","Intercrops with beans",
-                         "Household decision responsibility","Do they grow beans for sale?","Quantity of beans planted in long rain season",
-                         "Quantity of beans planted in short rain season","Quantity of beans harvested in long rain season"
-                         ,"Quantity of beans harvested in short rain season")) %>% kable()
+           Description=c("Identifiant de l'agriculteur", "Nom du village", "Composition du ménage", "Sexe du chef de ménage", "Âge du chef de ménage",
+                         "Occupation du chef de ménage", "Nombre d'adultes dans le ménage", "Nombre d'enfants (<18) au sein du ménage", "Cultivent-ils du matoke?",
+                         "Cultivent-ils du maïs?", "Cultivent-ils des haricots?", "Cultivent-ils des bananes?", "Cultivent-ils du manioc?",
+                         "Cultivent-ils du café?", "Superficie de la ferme (acres)", "Utilisation de la main-d'oeuvre", "Cultures intercalaires avec des haricots",
+                         "Responsabilité de décision des ménages", "Cultivent-ils des haricots pour la vente?", "Quantité de haricots plantés pendant la longue saison des pluies",
+                         "Quantité de haricots plantés pendant la courte saison des pluies", "Quantité de haricots récoltés pendant la longue saison des pluies"
+                         , "Quantité de haricots récoltés pendant la courte saison des pluies")) %>% kable()
 
 ```
 
 
-Spend some time exploring the full dataset embedded below, to familiarise yourself with the columns and the type of data stored within each column. You may need to refer back to this data at times during this tutorial. Remember that R is case sensitive, so you will always have to refer to the variables in this dataset exactly as they are written in the data. There is a column in this data called "GENDERHH" but there is no column in this data called "GenderHH".
+Passez un peu de temps à explorer le jeu des données ci-dessous, pour vous familiariser avec les colonnes et le type de données stockées dans chaque colonne. Vous aurez peut-être besoin de vous référer à ces données à certains moments au cours de ce tutoriel. N'oubliez pas que R est sensible à la casse, vous devrez donc toujours vous référer aux variables de cet jeu de données exactement comme elles sont écrites dans les données. Il y a une colonne dans ces données appelée "GENDERHH" mais il n'y a pas de colonne dans ces données appelée "GenderHH".
 
 ```{r,echo=FALSE}
 DT::datatable(BeanSurvey)
 ```
 
-(You can use the arrow keys on your keyboard to scroll right in case the data table does not fit entirely on your screen)
+(Vous pouvez utiliser les touches fléchées de votre clavier pour faire défiler vers la droite au cas où le tableau de données ne tiendrait pas entièrement sur votre écran)
 
 
-## Appendix: Useful reference links  
+## Appendix: liens utiles  
 
 
-The official dplyr documentation: <a href="https://dplyr.tidyverse.org/" target="_blank">https://dplyr.tidyverse.org/</a> 
+Introduction à dplyr: <a href="https://juba.github.io/tidyverse/10-dplyr.html" target="_blank">https://juba.github.io/tidyverse/10-dplyr.html</a> 
 
-dplyr CheatSheet:<a href="https://github.com/rstudio/cheatsheets/blob/master/data-transformation.pdf" target="_blank">https://github.com/rstudio/cheatsheets/blob/master/data-transformation.pdf   </a>  
+L'operateur pipe explique avec humour: <a href="http://perso.ens-lyon.fr/lise.vaudor/utiliser-des-pipes-pour-enchainer-des-instructions/" target="_blank">http://perso.ens-lyon.fr/lise.vaudor/utiliser-des-pipes-pour-enchainer-des-instructions/</a> 
 
-Data Manipulation Tools - Rstudio video:
-<a href="https://www.youtube.com/watch?v=Zc_ufg4uW4U" target="_blank">dplyr -- Pt 3 Intro to the Grammar of Data Manipulation with R   </a> 
+Mannipulation de données avec dplyr en video:
+<a href="https://www.youtube.com/watch?v=aFvBhgmawcs&feature=youtu.be" target="_blank">https://www.youtube.com/watch?v=aFvBhgmawcs&feature=youtu.be </a> 
 
-Some documentation on subsetting r-objects using base-R: <a href="https://bookdown.org/rdpeng/rprogdatascience/subsetting-r-objects.html" target="_blank">https://bookdown.org/rdpeng/rprogdatascience/subsetting-r-objects.html </a> 
 
 

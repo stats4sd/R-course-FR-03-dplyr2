@@ -18,19 +18,19 @@ BeanSurvey <- read.csv("bean_survey.csv")
 
 ## Solutions
 
-All of the exercises are using the `BeanSurvey` data we have been working with so far - remember you can also go back to look at the description of the data and the variables.
+Tous les exercices utilisent les données de l'enquête "BeanSurvey" avec lesquelles nous avons travaillé jusqu'à présent - n'oubliez pas que vous pouvez également revenir en arrière pour consulter la description des données et des variables.
 
 
-**Exercise 1. retrieve the households that grow banana**
+**Exercice 1. Récupérer les ménages qui cultivent des bananes**
 
 
-Filter  is the function to use to keep only the rows that satisfy a certain condition - here the households who grow beans
+Le filtre est la fonction à utiliser pour ne garder que les rangs qui satisfont à une certaine condition - ici les ménages qui cultivent des haricots
 
 ```{r}
 filter(BeanSurvey, BANANA=="Yes")
 ```
 
-We could also have used a pipe:
+Nous aurions aussi pu utiliser une pipe :
 
 ```{r eval=FALSE}
 BeanSurvey %>%
@@ -38,7 +38,7 @@ BeanSurvey %>%
 ```
 
 
-**Exercise 2. Identify and correct the four mistakes that I made in the command below, to obtain the median land area of farm of all the households in the BeanSurvey dataset**
+**Exercice 2. Identifiez et corrigez les quatre erreurs que j'ai commises dans la commande ci-dessous, pour obtenir la surface agricole médiane de tous les ménages de l'ensemble de données BeanSurvey**
 
 
 
@@ -54,13 +54,13 @@ BeanSurvey %>%
    summarize(median_landArea = median(LANDAREA))
 ```
 
-1. either BeanSurvey should be removed from filter, or the first line should be deleted
-2. the condition of the filter function needs a double equals
-3. the function summarise was misspelled
-4. the parenthesis of the function summarise was not closed
+1. soit BeanSurvey doit être retiré du filtre, soit la première ligne doit être supprimée
+2. l'état de la fonction de filtrage nécessite un double égal
+3. le résumé de la fonction a été mal orthographié
+4. la parenthèse du résumé de la fonction n'a pas été fermée
 
 
-**Exercise 3. which are the 4 households who planted the largest quantity of beans during short rain season?**
+**Exercice 3. Quels sont les 4 ménages qui ont planté la plus grande quantité de haricots pendant la courte saison des pluies ?
 
 
 ```{r}
@@ -71,11 +71,11 @@ BeanSurvey %>%
 
 
 
-**Exercise 4. What is the mean, median and standard deviation of the yield of bean per acre that households harvested during the long rain season in each village**
+**Exercice 4. Quelle est la moyenne, la médiane et l'écart-type du rendement en haricots par acre que les ménages ont récolté pendant la longue saison des pluies dans chaque village**
 
 
-The yield of beans per acre is not a column that we have in our dataset, so we need to create it. mutate() is the function to use for that. We then want summaries for each village, so we use group_by() and then summarise().
-The argument na.rm is required as there are missing values in the variable BEANSHARVESTED_LR, and therefore in yield_per_acre
+Le rendement des haricots par acre n'est pas une colonne que nous avons dans notre ensemble de données, nous devons donc le créer. mutate() est la fonction à utiliser pour cela. Nous voulons ensuite des résumés pour chaque village, donc nous utilisons group_by() et ensuite summarise().
+L'argument na.rm est nécessaire car il y a des valeurs manquantes dans la variable BEANSHARVESTED_LR, et donc dans yield_per_acre
 
 ```{r}
 BeanSurvey %>% 
@@ -99,10 +99,10 @@ BeanSurvey %>%
 ```
 
 
-**Exercise 4b. How would you produce the same summary statistics, but by village AND by gender of the head of household rather than by village only?**
+**Exercice 4b. Comment produiriez-vous les mêmes statistiques sommaires, mais par village ET par sexe du chef de ménage plutôt que par village seulement ?
 
 
-We can just copy the code from the question 4 and add the column GENDERHH in the group_by() function. We then realise that the output shows an extra row because there is a missing value in the column GENDERHH. I decide to remove this household to have a neat output that answer the question
+Nous pouvons simplement copier le code de la question 4 et ajouter la colonne GENRE dans la fonction group_by(). Nous nous rendons alors compte que la sortie montre une ligne supplémentaire parce qu'il y a une valeur manquante dans la colonne GENDERHH. Je décide de supprimer ce ménage pour obtenir une sortie nette qui répond à la question
 
 
 ```{r}
@@ -116,10 +116,10 @@ BeanSurvey %>%
 ```
 
 
-**Exercise 5. Generate a scatterplot showing for each household who have planted beans, the total quantity of the beans planted against the land area of their farm. Color the points by gender of the head of household**
+**Exercice 5. Créez un diagramme de dispersion montrant, pour chaque ménage qui a planté des haricots, la quantité totale de haricots plantés par rapport à la superficie de leur exploitation. Colorez les points selon le sexe du chef de ménage**
 
 
-We create variable total quantity of beans planted using mutate and then pipe into ggplot(). We realise after adding colours that we have - again - a missing value in the variable GENDERHH that is adding an extra NA category in our plot. We can decide if it's an issue or not. I decide to remove it and so I add a filter to get rid of the missing value.
+Nous créons une quantité totale variable de haricots plantés en utilisant la méthode de mutation et ensuite le pipeau dans ggplot(). Nous nous rendons compte, après avoir ajouté des couleurs, qu'il nous manque - une fois de plus - une valeur dans la variable GENDERHH qui ajoute une catégorie NA supplémentaire dans notre parcelle. Nous pouvons décider si c'est un problème ou non. Je décide de le supprimer et j'ajoute donc un filtre pour me débarrasser de la valeur manquante.
 
 ```{r}
 BeanSurvey %>%
@@ -130,10 +130,10 @@ BeanSurvey %>%
 ```
 
 
-**Exercise 6. Generate a boxplot of the quantity of beans harvested during the long rain season by type of household composition, keeping only the two main household composition types. Apply an appropriate 'scale' transformation to the quantity of beans harvested**
+**Exercice 6. Générez un boxplot de la quantité de haricots récoltés pendant la longue saison des pluies par type de composition du ménage, en ne conservant que les deux principaux types de composition du ménage. Appliquez une transformation "d'échelle" appropriée à la quantité de haricots récoltés**
 
-This is a follow up of a question from the ggplot exercises.
-We simply use filter to keep only the households whose composition type is either "Female headed, no husband" or "Male headed one wife", and then we pipe it into the plot that we had done in ggplot exercise.
+Ceci est le suivi d'une question des exercices ggplot.
+Nous utilisons simplement un filtre pour ne retenir que les ménages dont le type de composition est soit "Femme chef de famille, pas de mari", soit "Homme chef de famille, une femme", puis nous le pipe dans la parcelle que nous avons réalisée dans l'exercice ggplot.
 
 ```{r}
 BeanSurvey %>%
